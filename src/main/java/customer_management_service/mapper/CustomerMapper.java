@@ -58,7 +58,31 @@ public class CustomerMapper {
         return customer;
     }
     
+    /**
+     * Updates a Customer entity with data from CustomerUpdateDTO.
+     * Only updates non-null fields and validates string fields.
+     * 
+     * @param customer the customer entity to update
+     * @param dto the DTO containing update data
+     * @throws InvalidDataException if customer is null or string fields are empty
+     */
     public void updateEntityFromDTO(Customer customer, CustomerUpdateDTO dto) {
+        validateInputs(customer, dto);
+        
+        updateStringFieldIfPresent(customer::setFirstName, dto.getFirstName(), "First name");
+        updateStringFieldIfPresent(customer::setLastName, dto.getLastName(), "Last name");
+        updateFieldIfPresent(customer::setAge, dto.getAge());
+        updateFieldIfPresent(customer::setBirthDate, dto.getBirthDate());
+    }
+
+    /**
+     * Validates that customer and dto are not null.
+     * 
+     * @param customer the customer entity
+     * @param dto the update DTO
+     * @throws InvalidDataException if customer is null
+     */
+    private void validateInputs(Customer customer, CustomerUpdateDTO dto) {
         if (dto == null) {
             return;
         }
@@ -66,24 +90,36 @@ public class CustomerMapper {
         if (customer == null) {
             throw new InvalidDataException("Customer entity cannot be null for update");
         }
-        
-        if (dto.getFirstName() != null) {
-            if (dto.getFirstName().trim().isEmpty()) {
-                throw new InvalidDataException("First name cannot be empty");
+    }
+
+    /**
+     * Updates a string field if the value is present and not empty.
+     * 
+     * @param setter the setter method for the field
+     * @param value the value to set
+     * @param fieldName the name of the field for error messages
+     * @throws InvalidDataException if the value is empty after trimming
+     */
+    private void updateStringFieldIfPresent(java.util.function.Consumer<String> setter, String value, String fieldName) {
+        if (value != null) {
+            String trimmedValue = value.trim();
+            if (trimmedValue.isEmpty()) {
+                throw new InvalidDataException(fieldName + " cannot be empty");
             }
-            customer.setFirstName(dto.getFirstName().trim());
+            setter.accept(trimmedValue);
         }
-        if (dto.getLastName() != null) {
-            if (dto.getLastName().trim().isEmpty()) {
-                throw new InvalidDataException("Last name cannot be empty");
-            }
-            customer.setLastName(dto.getLastName().trim());
-        }
-        if (dto.getAge() != null) {
-            customer.setAge(dto.getAge());
-        }
-        if (dto.getBirthDate() != null) {
-            customer.setBirthDate(dto.getBirthDate());
+    }
+
+    /**
+     * Updates a field if the value is present.
+     * 
+     * @param setter the setter method for the field
+     * @param value the value to set
+     * @param <T> the type of the field
+     */
+    private <T> void updateFieldIfPresent(java.util.function.Consumer<T> setter, T value) {
+        if (value != null) {
+            setter.accept(value);
         }
     }
 } 
