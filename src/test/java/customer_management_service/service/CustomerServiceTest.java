@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
@@ -23,7 +22,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ActiveProfiles("test")
@@ -33,7 +31,7 @@ class CustomerServiceTest {
     private CustomerRepository customerRepository;
 
     @Mock
-    private RabbitTemplate rabbitTemplate;
+    private CustomerMessagingService customerMessagingService;
 
     @Mock
     private CustomerMapper customerMapper;
@@ -78,7 +76,7 @@ class CustomerServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals(LocalDate.of(2059, 1, 1), result.getEstimatedEventDate());
-        verify(rabbitTemplate).convertAndSend(eq("customer.events"), eq("customer.created"), any(Customer.class));
+        verify(customerMessagingService).sendCustomerCreatedEvent(any(Customer.class));
     }
 
     @Test
@@ -194,15 +192,16 @@ class CustomerServiceTest {
         assertEquals("Smith", result.getLastName());
         assertEquals(31, result.getAge());
         assertEquals(LocalDate.of(2058, 1, 1), result.getEstimatedEventDate());
-        verify(rabbitTemplate).convertAndSend(eq("customer.events"), eq("customer.updated"), any(Customer.class));
+        verify(customerMessagingService).sendCustomerUpdatedEvent(any(Customer.class));
     }
 
     @Test
-    void deleteCustomer_ShouldDeleteCustomer() {
+    void deleteCustomer_ShouldDeleteAndSendMessage() {
         // Arrange
         Long id = 1L;
         Customer customer = new Customer();
         customer.setId(id);
+
         when(customerRepository.findById(id)).thenReturn(Optional.of(customer));
 
         // Act
@@ -210,32 +209,32 @@ class CustomerServiceTest {
 
         // Assert
         verify(customerRepository).delete(customer);
-        verify(rabbitTemplate).convertAndSend(eq("customer.events"), eq("customer.deleted"), eq(id));
+        verify(customerMessagingService).sendCustomerDeletedEvent(id);
     }
 
     @Test
     void getAverageAge_ShouldReturnCorrectAverage() {
         // Arrange
-        when(customerRepository.getAverageAge()).thenReturn(30.0);
+        when(customerRepository.getAverageAge()).thenReturn(25.5);
 
         // Act
         Double result = customerService.getAverageAge();
 
         // Assert
-        assertEquals(30.0, result);
+        assertEquals(25.5, result);
         verify(customerRepository).getAverageAge();
     }
 
     @Test
     void getAgeStandardDeviation_ShouldReturnCorrectDeviation() {
         // Arrange
-        when(customerRepository.getAgeStandardDeviation()).thenReturn(5.0);
+        when(customerRepository.getAgeStandardDeviation()).thenReturn(8.2);
 
         // Act
         Double result = customerService.getAgeStandardDeviation();
 
         // Assert
-        assertEquals(5.0, result);
+        assertEquals(8.2, result);
         verify(customerRepository).getAgeStandardDeviation();
     }
 } 

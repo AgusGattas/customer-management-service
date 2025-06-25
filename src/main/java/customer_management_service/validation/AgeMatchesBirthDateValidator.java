@@ -7,6 +7,7 @@ import jakarta.validation.ConstraintValidatorContext;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.ZoneOffset;
 
 public class AgeMatchesBirthDateValidator implements ConstraintValidator<AgeMatchesBirthDate, Object> {
 
@@ -35,7 +36,7 @@ public class AgeMatchesBirthDateValidator implements ConstraintValidator<AgeMatc
         }
 
         // Calculate real age based on birth date
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
         Period period = Period.between(birthDate, today);
         int calculatedAge = period.getYears();
 

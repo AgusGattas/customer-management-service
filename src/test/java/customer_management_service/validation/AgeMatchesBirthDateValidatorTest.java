@@ -4,8 +4,10 @@ import customer_management_service.dto.CustomerCreateDTO;
 import customer_management_service.dto.CustomerUpdateDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,81 +21,117 @@ class AgeMatchesBirthDateValidatorTest {
     }
 
     @Test
-    void isValid_ShouldReturnTrue_WhenValidAgeAndBirthDate() {
-        // Arrange
+    @DisplayName("Should be valid when age matches birth date")
+    void shouldBeValidWhenAgeMatchesBirthDate() {
+        // Given
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setAge(30);
-        dto.setBirthDate(LocalDate.now().minusYears(30));
+        dto.setBirthDate(LocalDate.now(ZoneOffset.UTC).minusYears(30));
 
-        // Act
+        // When
         boolean isValid = validator.isValid(dto, null);
 
-        // Assert
+        // Then
         assertTrue(isValid);
     }
 
     @Test
-    void isValid_ShouldReturnFalse_WhenInvalidAgeAndBirthDate() {
-        // Arrange
+    @DisplayName("Should be invalid when age does not match birth date")
+    void shouldBeInvalidWhenAgeDoesNotMatchBirthDate() {
+        // Given
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setAge(30);
-        dto.setBirthDate(LocalDate.now().minusYears(25)); // 5 años de diferencia
+        dto.setBirthDate(LocalDate.now(ZoneOffset.UTC).minusYears(25)); // 5 años de diferencia
 
-        // Act
+        // When
         boolean isValid = validator.isValid(dto, null);
 
-        // Assert
+        // Then
         assertFalse(isValid);
     }
 
     @Test
-    void isValid_ShouldReturnTrue_WhenAgeWithTolerance() {
-        // Arrange - Caso edge donde la edad puede variar en ±1 año
+    @DisplayName("Should be valid when age is within tolerance (±1 year)")
+    void shouldBeValidWhenAgeIsWithinTolerance() {
+        // Given
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setAge(30);
-        dto.setBirthDate(LocalDate.now().minusYears(30).minusDays(1)); // Justo antes del cumpleaños
+        dto.setBirthDate(LocalDate.now(ZoneOffset.UTC).minusYears(30).minusDays(1)); // Justo antes del cumpleaños
 
-        // Act
+        // When
         boolean isValid = validator.isValid(dto, null);
 
-        // Assert
+        // Then
         assertTrue(isValid);
     }
 
     @Test
-    void isValid_ShouldReturnTrue_WhenNullValues() {
-        // Arrange
+    @DisplayName("Should be valid when only age is provided")
+    void shouldBeValidWhenOnlyAgeIsProvided() {
+        // Given
+        CustomerCreateDTO dto = new CustomerCreateDTO();
+        dto.setAge(30);
+        dto.setBirthDate(null);
+
+        // When
+        boolean isValid = validator.isValid(dto, null);
+
+        // Then
+        assertTrue(isValid);
+    }
+
+    @Test
+    @DisplayName("Should be valid when only birth date is provided")
+    void shouldBeValidWhenOnlyBirthDateIsProvided() {
+        // Given
+        CustomerCreateDTO dto = new CustomerCreateDTO();
+        dto.setAge(null);
+        dto.setBirthDate(LocalDate.now(ZoneOffset.UTC).minusYears(25));
+
+        // When
+        boolean isValid = validator.isValid(dto, null);
+
+        // Then
+        assertTrue(isValid);
+    }
+
+    @Test
+    @DisplayName("Should be valid when both values are null")
+    void shouldBeValidWhenBothValuesAreNull() {
+        // Given
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setAge(null);
         dto.setBirthDate(null);
 
-        // Act
+        // When
         boolean isValid = validator.isValid(dto, null);
 
-        // Assert
-        assertTrue(isValid); // Debe ser válido si no hay valores para validar
-    }
-
-    @Test
-    void isValid_ShouldReturnTrue_WhenCustomerUpdateDTO() {
-        // Arrange
-        CustomerUpdateDTO dto = new CustomerUpdateDTO();
-        dto.setAge(25);
-        dto.setBirthDate(LocalDate.now().minusYears(25));
-
-        // Act
-        boolean isValid = validator.isValid(dto, null);
-
-        // Assert
+        // Then
         assertTrue(isValid);
     }
 
     @Test
-    void isValid_ShouldReturnTrue_WhenNullObject() {
-        // Act
+    @DisplayName("Should be valid when dto is null")
+    void shouldBeValidWhenDtoIsNull() {
+        // When
         boolean isValid = validator.isValid(null, null);
 
-        // Assert
+        // Then
+        assertTrue(isValid);
+    }
+
+    @Test
+    @DisplayName("Should work with CustomerUpdateDTO")
+    void shouldWorkWithCustomerUpdateDTO() {
+        // Given
+        CustomerUpdateDTO dto = new CustomerUpdateDTO();
+        dto.setAge(25);
+        dto.setBirthDate(LocalDate.now(ZoneOffset.UTC).minusYears(25));
+
+        // When
+        boolean isValid = validator.isValid(dto, null);
+
+        // Then
         assertTrue(isValid);
     }
 } 

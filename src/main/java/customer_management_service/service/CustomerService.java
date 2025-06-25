@@ -11,28 +11,29 @@ import customer_management_service.model.Customer;
 import customer_management_service.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
-
+/**
+ * Service responsible for customer business logic operations.
+ * Handles CRUD operations, validations, and business rules.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class CustomerService {
 
     private static final int RETIREMENT_AGE = 65;
-    private static final String CUSTOMER_EVENTS_EXCHANGE = "customer.events";
 
     private final CustomerRepository customerRepository;
-    private final RabbitTemplate rabbitTemplate;
     private final CustomerMapper customerMapper;
+    private final CustomerMessagingService customerMessagingService;
 
     /**
      * Creates a new customer.
@@ -52,7 +53,8 @@ public class CustomerService {
         
         Customer savedCustomer = customerRepository.save(customer);
         
-        sendMessageSafely(CUSTOMER_EVENTS_EXCHANGE, "customer.created", savedCustomer);
+        // Send asynchronous event notification
+        customerMessagingService.sendCustomerCreatedEvent(savedCustomer);
         
         return customerMapper.toDTO(savedCustomer);
     }
@@ -140,7 +142,8 @@ public class CustomerService {
 
         Customer updatedCustomer = customerRepository.save(customer);
         
-        sendMessageSafely(CUSTOMER_EVENTS_EXCHANGE, "customer.updated", updatedCustomer);
+        // Send asynchronous event notification
+        customerMessagingService.sendCustomerUpdatedEvent(updatedCustomer);
         
         return customerMapper.toDTO(updatedCustomer);
     }
@@ -159,23 +162,8 @@ public class CustomerService {
             
         customerRepository.delete(customer);
         
-        sendMessageSafely(CUSTOMER_EVENTS_EXCHANGE, "customer.deleted", id);
-    }
-
-    /**
-     * Sends a message safely, handling RabbitMQ errors.
-     * 
-     * @param exchange destination exchange
-     * @param routingKey routing key
-     * @param message message to send
-     */
-    private void sendMessageSafely(String exchange, String routingKey, Object message) {
-        try {
-            rabbitTemplate.convertAndSend(exchange, routingKey, message);
-            log.info("Message sent successfully to {} with routing key {}", exchange, routingKey);
-        } catch (Exception e) {
-            log.warn("Failed to send message to RabbitMQ: {}", e.getMessage());
-        }
+        // Send asynchronous event notification
+        customerMessagingService.sendCustomerDeletedEvent(id);
     }
 
     /**
@@ -189,7 +177,7 @@ public class CustomerService {
             return;
         }
         
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
         Period period = Period.between(birthDate, today);
         int calculatedAge = period.getYears();
         
