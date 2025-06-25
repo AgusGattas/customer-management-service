@@ -10,6 +10,7 @@ import customer_management_service.model.Customer;
 import customer_management_service.repository.CustomerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -74,6 +75,42 @@ class CustomerServiceTest {
         CustomerDTO result = customerService.createCustomer(createDTO);
 
         // Assert
+        assertNotNull(result);
+        assertEquals(LocalDate.of(2059, 1, 1), result.getEstimatedEventDate());
+        verify(customerMessagingService).sendCustomerCreatedEvent(any(Customer.class));
+    }
+
+    @Test
+    @DisplayName("Should calculate estimated event date correctly")
+    void shouldCalculateEstimatedEventDateCorrectly() {
+        // Given
+        CustomerCreateDTO createDTO = new CustomerCreateDTO();
+        createDTO.setFirstName("John");
+        createDTO.setLastName("Doe");
+        createDTO.setAge(30);
+        createDTO.setBirthDate(LocalDate.of(1994, 1, 1));
+
+        Customer customer = new Customer();
+        customer.setFirstName(createDTO.getFirstName());
+        customer.setLastName(createDTO.getLastName());
+        customer.setAge(createDTO.getAge());
+        customer.setBirthDate(createDTO.getBirthDate());
+
+        CustomerDTO expectedDTO = new CustomerDTO();
+        expectedDTO.setFirstName(customer.getFirstName());
+        expectedDTO.setLastName(customer.getLastName());
+        expectedDTO.setAge(customer.getAge());
+        expectedDTO.setBirthDate(customer.getBirthDate());
+        expectedDTO.setEstimatedEventDate(LocalDate.of(2059, 1, 1));
+
+        when(customerMapper.toEntity(createDTO)).thenReturn(customer);
+        when(customerRepository.save(any(Customer.class))).thenReturn(customer);
+        when(customerMapper.toDTO(customer)).thenReturn(expectedDTO);
+
+        // When
+        CustomerDTO result = customerService.createCustomer(createDTO);
+
+        // Then
         assertNotNull(result);
         assertEquals(LocalDate.of(2059, 1, 1), result.getEstimatedEventDate());
         verify(customerMessagingService).sendCustomerCreatedEvent(any(Customer.class));

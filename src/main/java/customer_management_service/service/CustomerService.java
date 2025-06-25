@@ -48,8 +48,7 @@ public class CustomerService {
         
         Customer customer = customerMapper.toEntity(customerDTO);
         
-        LocalDate estimatedEventDate = customer.getBirthDate().plusYears(RETIREMENT_AGE);
-        customer.setEstimatedEventDate(estimatedEventDate);
+        customer.setEstimatedEventDate(getEstimatedEventDate(customer));
         
         Customer savedCustomer = customerRepository.save(customer);
         
@@ -136,8 +135,7 @@ public class CustomerService {
         customerMapper.updateEntityFromDTO(customer, customerDTO);
         
         if (customerDTO.getBirthDate() != null) {
-            LocalDate estimatedEventDate = customer.getBirthDate().plusYears(RETIREMENT_AGE);
-            customer.setEstimatedEventDate(estimatedEventDate);
+            customer.setEstimatedEventDate(getEstimatedEventDate(customer));
         }
 
         Customer updatedCustomer = customerRepository.save(customer);
@@ -187,5 +185,15 @@ public class CustomerService {
                     age, birthDate, calculatedAge)
             );
         }
+    }
+
+    /**
+     * Calculates the estimated event date (retirement) based on customer's birth date.
+     * 
+     * @param customer the customer to calculate the event date for
+     * @return the estimated event date
+     */
+    private LocalDate getEstimatedEventDate(Customer customer) {
+        return customer.getBirthDate().plusYears(RETIREMENT_AGE);
     }
 } 
