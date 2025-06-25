@@ -128,15 +128,9 @@ public class CustomerService {
         Customer customer = customerRepository.findById(id)
             .orElseThrow(() -> new CustomerNotFoundException(id));
 
-        if (customerDTO.getAge() != null && customerDTO.getBirthDate() != null) {
-            validateAgeMatchesBirthDate(customerDTO.getAge(), customerDTO.getBirthDate());
-        }
-
+        validateUpdateData(customerDTO);
         customerMapper.updateEntityFromDTO(customer, customerDTO);
-        
-        if (customerDTO.getBirthDate() != null) {
-            customer.setEstimatedEventDate(getEstimatedEventDate(customer));
-        }
+        updateEstimatedEventDateIfNeeded(customer, customerDTO);
 
         Customer updatedCustomer = customerRepository.save(customer);
         
@@ -144,6 +138,29 @@ public class CustomerService {
         customerMessagingService.sendCustomerUpdatedEvent(updatedCustomer);
         
         return customerMapper.toDTO(updatedCustomer);
+    }
+
+    /**
+     * Validates the update data if both age and birth date are provided.
+     * 
+     * @param customerDTO the update data to validate
+     */
+    private void validateUpdateData(CustomerUpdateDTO customerDTO) {
+        if (customerDTO.getAge() != null && customerDTO.getBirthDate() != null) {
+            validateAgeMatchesBirthDate(customerDTO.getAge(), customerDTO.getBirthDate());
+        }
+    }
+
+    /**
+     * Updates the estimated event date if birth date was changed.
+     * 
+     * @param customer the customer to update
+     * @param customerDTO the update data
+     */
+    private void updateEstimatedEventDateIfNeeded(Customer customer, CustomerUpdateDTO customerDTO) {
+        if (customerDTO.getBirthDate() != null) {
+            customer.setEstimatedEventDate(getEstimatedEventDate(customer));
+        }
     }
 
     /**
