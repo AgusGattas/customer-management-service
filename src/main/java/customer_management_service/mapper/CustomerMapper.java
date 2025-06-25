@@ -3,6 +3,7 @@ package customer_management_service.mapper;
 import customer_management_service.dto.CustomerCreateDTO;
 import customer_management_service.dto.CustomerDTO;
 import customer_management_service.dto.CustomerUpdateDTO;
+import customer_management_service.exception.InvalidDataException;
 import customer_management_service.model.Customer;
 import org.springframework.stereotype.Component;
 
@@ -29,12 +30,28 @@ public class CustomerMapper {
     
     public Customer toEntity(CustomerCreateDTO dto) {
         if (dto == null) {
-            return null;
+            throw new InvalidDataException("Customer data cannot be null");
+        }
+        
+        if (dto.getFirstName() == null || dto.getFirstName().trim().isEmpty()) {
+            throw new InvalidDataException("First name cannot be null or empty");
+        }
+        
+        if (dto.getLastName() == null || dto.getLastName().trim().isEmpty()) {
+            throw new InvalidDataException("Last name cannot be null or empty");
+        }
+        
+        if (dto.getAge() == null) {
+            throw new InvalidDataException("Age cannot be null");
+        }
+        
+        if (dto.getBirthDate() == null) {
+            throw new InvalidDataException("Birth date cannot be null");
         }
         
         Customer customer = new Customer();
-        customer.setFirstName(dto.getFirstName());
-        customer.setLastName(dto.getLastName());
+        customer.setFirstName(dto.getFirstName().trim());
+        customer.setLastName(dto.getLastName().trim());
         customer.setAge(dto.getAge());
         customer.setBirthDate(dto.getBirthDate());
         
@@ -46,11 +63,21 @@ public class CustomerMapper {
             return;
         }
         
+        if (customer == null) {
+            throw new InvalidDataException("Customer entity cannot be null for update");
+        }
+        
         if (dto.getFirstName() != null) {
-            customer.setFirstName(dto.getFirstName());
+            if (dto.getFirstName().trim().isEmpty()) {
+                throw new InvalidDataException("First name cannot be empty");
+            }
+            customer.setFirstName(dto.getFirstName().trim());
         }
         if (dto.getLastName() != null) {
-            customer.setLastName(dto.getLastName());
+            if (dto.getLastName().trim().isEmpty()) {
+                throw new InvalidDataException("Last name cannot be empty");
+            }
+            customer.setLastName(dto.getLastName().trim());
         }
         if (dto.getAge() != null) {
             customer.setAge(dto.getAge());

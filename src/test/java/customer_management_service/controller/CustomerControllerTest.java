@@ -70,8 +70,10 @@ public class CustomerControllerTest {
 
     @Test
     void createCustomer_ShouldReturnCreatedCustomer() throws Exception {
+        // Arrange
         when(customerService.createCustomer(any(CustomerCreateDTO.class))).thenReturn(customerDTO);
 
+        // Act & Assert
         mockMvc.perform(post("/api/customers")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(customerCreateDTO)))
@@ -84,9 +86,11 @@ public class CustomerControllerTest {
 
     @Test
     void getAllCustomers_ShouldReturnListOfCustomers() throws Exception {
+        // Arrange
         List<CustomerDTO> customers = Arrays.asList(customerDTO);
         when(customerService.getAllCustomers()).thenReturn(customers);
 
+        // Act & Assert
         mockMvc.perform(get("/api/customers"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
@@ -97,8 +101,10 @@ public class CustomerControllerTest {
 
     @Test
     void getCustomerById_ShouldReturnCustomer() throws Exception {
+        // Arrange
         when(customerService.getCustomerById(anyLong())).thenReturn(customerDTO);
 
+        // Act & Assert
         mockMvc.perform(get("/api/customers/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
@@ -109,6 +115,7 @@ public class CustomerControllerTest {
 
     @Test
     void updateCustomer_ShouldReturnUpdatedCustomer() throws Exception {
+        // Arrange
         CustomerDTO updatedCustomer = new CustomerDTO();
         updatedCustomer.setId(1L);
         updatedCustomer.setFirstName("Jane");
@@ -118,6 +125,7 @@ public class CustomerControllerTest {
 
         when(customerService.updateCustomer(anyLong(), any(CustomerUpdateDTO.class))).thenReturn(updatedCustomer);
 
+        // Act & Assert
         mockMvc.perform(patch("/api/customers/1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(customerUpdateDTO)))
@@ -130,14 +138,17 @@ public class CustomerControllerTest {
 
     @Test
     void deleteCustomer_ShouldReturnNoContent() throws Exception {
+        // Act & Assert
         mockMvc.perform(delete("/api/customers/1"))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void getCustomerStats_ShouldReturnAllStats() throws Exception {
+        // Arrange
         when(customerService.getCustomerStats()).thenReturn(customerStatsDTO);
 
+        // Act & Assert
         mockMvc.perform(get("/api/customers/stats"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.averageAge").value(30.0))
@@ -147,8 +158,10 @@ public class CustomerControllerTest {
 
     @Test
     void getAverageAge_ShouldReturnAverageAge() throws Exception {
+        // Arrange
         when(customerService.getAverageAge()).thenReturn(30.0);
 
+        // Act & Assert
         mockMvc.perform(get("/api/customers/stats/average-age"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("30.0"));
@@ -156,8 +169,10 @@ public class CustomerControllerTest {
 
     @Test
     void getAgeStandardDeviation_ShouldReturnStandardDeviation() throws Exception {
+        // Arrange
         when(customerService.getAgeStandardDeviation()).thenReturn(5.0);
 
+        // Act & Assert
         mockMvc.perform(get("/api/customers/stats/age-standard-deviation"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("5.0"));

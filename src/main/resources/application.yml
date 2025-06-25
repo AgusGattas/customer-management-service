@@ -43,7 +43,7 @@ management:
 
 logging:
   level:
-    com.lciii.tup.customer_management_service: INFO
+    customer_management_service: INFO
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE

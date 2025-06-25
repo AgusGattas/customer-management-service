@@ -5,6 +5,7 @@ import customer_management_service.dto.CustomerCreateDTO;
 import customer_management_service.dto.CustomerDTO;
 import customer_management_service.dto.CustomerStatsDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -37,17 +38,21 @@ public class CustomerIntegrationTest {
 
     private MockMvc mockMvc;
 
-    @Test
-    void testCompleteCustomerFlow() throws Exception {
+    @BeforeEach
+    void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+    }
 
-        // Create customer
+    @Test
+    void completeCustomerFlow_ShouldWorkEndToEnd() throws Exception {
+        // Arrange
         CustomerCreateDTO createDTO = new CustomerCreateDTO();
         createDTO.setFirstName("Juan");
         createDTO.setLastName("Pérez");
         createDTO.setAge(30);
         createDTO.setBirthDate(LocalDate.of(1994, 1, 1));
 
+        // Act & Assert - Create customer
         String createResponse = mockMvc.perform(post("/api/customers")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(createDTO)))
@@ -62,55 +67,55 @@ public class CustomerIntegrationTest {
 
         CustomerDTO createdCustomer = objectMapper.readValue(createResponse, CustomerDTO.class);
 
-        // Get customer by ID
+        // Act & Assert - Get customer by ID
         mockMvc.perform(get("/api/customers/" + createdCustomer.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(createdCustomer.getId()))
                 .andExpect(jsonPath("$.firstName").value("Juan"));
 
-        // Get all customers
+        // Act & Assert - Get all customers
         mockMvc.perform(get("/api/customers"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].firstName").value("Juan"));
 
-        // Get statistics
+        // Act & Assert - Get statistics
         mockMvc.perform(get("/api/customers/stats"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.averageAge").value(30.0))
                 .andExpect(jsonPath("$.totalCustomers").value(1));
 
-        // Delete customer
+        // Act & Assert - Delete customer
         mockMvc.perform(delete("/api/customers/" + createdCustomer.getId()))
                 .andExpect(status().isNoContent());
 
-        // Verify customer is deleted
+        // Act & Assert - Verify customer is deleted
         mockMvc.perform(get("/api/customers/" + createdCustomer.getId()))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void testValidationErrors() throws Exception {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-
-        // Test invalid age
+    void validationErrors_ShouldReturnBadRequest_WhenInvalidData() throws Exception {
+        // Arrange - Test invalid age
         CustomerCreateDTO invalidDTO = new CustomerCreateDTO();
         invalidDTO.setFirstName("Juan");
         invalidDTO.setLastName("Pérez");
         invalidDTO.setAge(200); // Invalid age
         invalidDTO.setBirthDate(LocalDate.of(1994, 1, 1));
 
+        // Act & Assert
         mockMvc.perform(post("/api/customers")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidDTO)))
                 .andExpect(status().isBadRequest());
 
-        // Test invalid name format
+        // Arrange - Test invalid name format
         CustomerCreateDTO invalidNameDTO = new CustomerCreateDTO();
         invalidNameDTO.setFirstName("Juan123"); // Invalid name format
         invalidNameDTO.setLastName("Pérez");
         invalidNameDTO.setAge(30);
         invalidNameDTO.setBirthDate(LocalDate.of(1994, 1, 1));
 
+        // Act & Assert
         mockMvc.perform(post("/api/customers")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidNameDTO)))

@@ -29,7 +29,7 @@ class CustomerControllerValidationTest {
     private ObjectMapper objectMapper;
 
     @Test
-    void testCreateCustomerWithValidAgeAndBirthDate() throws Exception {
+    void createCustomer_ShouldReturnOk_WhenValidAgeAndBirthDate() throws Exception {
         // Arrange
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setFirstName("Juan");
@@ -48,7 +48,7 @@ class CustomerControllerValidationTest {
     }
 
     @Test
-    void testCreateCustomerWithInvalidAgeAndBirthDate() throws Exception {
+    void createCustomer_ShouldReturnBadRequest_WhenInvalidAgeAndBirthDate() throws Exception {
         // Arrange
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setFirstName("Juan");
@@ -66,7 +66,7 @@ class CustomerControllerValidationTest {
     }
 
     @Test
-    void testUpdateCustomerWithInvalidAgeAndBirthDate() throws Exception {
+    void updateCustomer_ShouldReturnBadRequest_WhenInvalidAgeAndBirthDate() throws Exception {
         // Arrange
         CustomerUpdateDTO dto = new CustomerUpdateDTO();
         dto.setAge(40);
@@ -82,7 +82,7 @@ class CustomerControllerValidationTest {
     }
 
     @Test
-    void testCreateCustomerWithAgeTooHigh() throws Exception {
+    void createCustomer_ShouldReturnBadRequest_WhenAgeTooHigh() throws Exception {
         // Arrange
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setFirstName("Juan");
@@ -100,7 +100,7 @@ class CustomerControllerValidationTest {
     }
 
     @Test
-    void testCreateCustomerWithFutureBirthDate() throws Exception {
+    void createCustomer_ShouldReturnBadRequest_WhenFutureBirthDate() throws Exception {
         // Arrange
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setFirstName("Juan");

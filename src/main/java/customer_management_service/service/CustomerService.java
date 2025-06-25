@@ -5,6 +5,7 @@ import customer_management_service.dto.CustomerDTO;
 import customer_management_service.dto.CustomerUpdateDTO;
 import customer_management_service.dto.CustomerStatsDTO;
 import customer_management_service.exception.CustomerNotFoundException;
+import customer_management_service.exception.InvalidDataException;
 import customer_management_service.mapper.CustomerMapper;
 import customer_management_service.model.Customer;
 import customer_management_service.repository.CustomerRepository;
@@ -15,13 +16,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Service for customer management.
- * Handles CRUD operations, statistics and asynchronous messaging.
- */
+
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -43,15 +43,15 @@ public class CustomerService {
      */
     @Transactional
     public CustomerDTO createCustomer(CustomerCreateDTO customerDTO) {
+        validateAgeMatchesBirthDate(customerDTO.getAge(), customerDTO.getBirthDate());
+        
         Customer customer = customerMapper.toEntity(customerDTO);
         
-        // Calculate estimated event date (retirement)
         LocalDate estimatedEventDate = customer.getBirthDate().plusYears(RETIREMENT_AGE);
         customer.setEstimatedEventDate(estimatedEventDate);
         
         Customer savedCustomer = customerRepository.save(customer);
         
-        // Send message to queue for async processing
         sendMessageSafely(CUSTOMER_EVENTS_EXCHANGE, "customer.created", savedCustomer);
         
         return customerMapper.toDTO(savedCustomer);
@@ -127,10 +127,12 @@ public class CustomerService {
         Customer customer = customerRepository.findById(id)
             .orElseThrow(() -> new CustomerNotFoundException(id));
 
-        // Update entity from DTO (validation is handled in mapper)
+        if (customerDTO.getAge() != null && customerDTO.getBirthDate() != null) {
+            validateAgeMatchesBirthDate(customerDTO.getAge(), customerDTO.getBirthDate());
+        }
+
         customerMapper.updateEntityFromDTO(customer, customerDTO);
         
-        // Recalculate estimated event date if birth date changed
         if (customerDTO.getBirthDate() != null) {
             LocalDate estimatedEventDate = customer.getBirthDate().plusYears(RETIREMENT_AGE);
             customer.setEstimatedEventDate(estimatedEventDate);
@@ -138,7 +140,6 @@ public class CustomerService {
 
         Customer updatedCustomer = customerRepository.save(customer);
         
-        // Send message to queue for async processing
         sendMessageSafely(CUSTOMER_EVENTS_EXCHANGE, "customer.updated", updatedCustomer);
         
         return customerMapper.toDTO(updatedCustomer);
@@ -158,7 +159,6 @@ public class CustomerService {
             
         customerRepository.delete(customer);
         
-        // Send message to queue for async processing
         sendMessageSafely(CUSTOMER_EVENTS_EXCHANGE, "customer.deleted", id);
     }
 
@@ -175,7 +175,29 @@ public class CustomerService {
             log.info("Message sent successfully to {} with routing key {}", exchange, routingKey);
         } catch (Exception e) {
             log.warn("Failed to send message to RabbitMQ: {}", e.getMessage());
-            // We don't throw the exception to avoid affecting the main operation
+        }
+    }
+
+    /**
+     * Valida que la edad proporcionada coincida con la fecha de nacimiento
+     * 
+     * @param age edad proporcionada
+     * @param birthDate fecha de nacimiento
+     */
+    private void validateAgeMatchesBirthDate(Integer age, LocalDate birthDate) {
+        if (age == null || birthDate == null) {
+            return;
+        }
+        
+        LocalDate today = LocalDate.now();
+        Period period = Period.between(birthDate, today);
+        int calculatedAge = period.getYears();
+        
+        if (Math.abs(age - calculatedAge) > 1) {
+            throw new InvalidDataException(
+                String.format("Age %d does not match birth date %s (calculated age: %d)", 
+                    age, birthDate, calculatedAge)
+            );
         }
     }
 } 

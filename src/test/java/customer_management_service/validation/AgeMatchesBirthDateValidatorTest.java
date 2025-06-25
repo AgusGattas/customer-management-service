@@ -19,7 +19,7 @@ class AgeMatchesBirthDateValidatorTest {
     }
 
     @Test
-    void testValidAgeAndBirthDate() {
+    void isValid_ShouldReturnTrue_WhenValidAgeAndBirthDate() {
         // Arrange
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setAge(30);
@@ -33,7 +33,7 @@ class AgeMatchesBirthDateValidatorTest {
     }
 
     @Test
-    void testInvalidAgeAndBirthDate() {
+    void isValid_ShouldReturnFalse_WhenInvalidAgeAndBirthDate() {
         // Arrange
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setAge(30);
@@ -47,7 +47,7 @@ class AgeMatchesBirthDateValidatorTest {
     }
 
     @Test
-    void testAgeWithTolerance() {
+    void isValid_ShouldReturnTrue_WhenAgeWithTolerance() {
         // Arrange - Caso edge donde la edad puede variar en ±1 año
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setAge(30);
@@ -61,7 +61,7 @@ class AgeMatchesBirthDateValidatorTest {
     }
 
     @Test
-    void testNullValues() {
+    void isValid_ShouldReturnTrue_WhenNullValues() {
         // Arrange
         CustomerCreateDTO dto = new CustomerCreateDTO();
         dto.setAge(null);
@@ -75,7 +75,7 @@ class AgeMatchesBirthDateValidatorTest {
     }
 
     @Test
-    void testCustomerUpdateDTO() {
+    void isValid_ShouldReturnTrue_WhenCustomerUpdateDTO() {
         // Arrange
         CustomerUpdateDTO dto = new CustomerUpdateDTO();
         dto.setAge(25);
@@ -89,7 +89,7 @@ class AgeMatchesBirthDateValidatorTest {
     }
 
     @Test
-    void testNullObject() {
+    void isValid_ShouldReturnTrue_WhenNullObject() {
         // Act
         boolean isValid = validator.isValid(null, null);
 

@@ -1,6 +1,7 @@
 package customer_management_service.dto;
 
 import customer_management_service.validation.AgeMatchesBirthDate;
+import customer_management_service.validation.ValidationConstants;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,26 +15,26 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @AgeMatchesBirthDate
 public class CustomerCreateDTO {
-    @NotBlank(message = "First name is required")
-    @Size(min = 2, max = 50, message = "The first name must be between 2 and 50 characters long")
-    @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "The first name can only contain letters and spaces")
+    @NotBlank(message = ValidationConstants.FIRST_NAME_REQUIRED)
+    @Size(min = ValidationConstants.MIN_NAME_LENGTH, max = ValidationConstants.MAX_NAME_LENGTH, message = ValidationConstants.FIRST_NAME_LENGTH)
+    @Pattern(regexp = ValidationConstants.NAME_PATTERN, message = ValidationConstants.NAME_PATTERN_MESSAGE)
     @Schema(example = "Juan")
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
-    @Size(min = 2, max = 50, message = "The last name must be between 2 and 50 characters long")
-    @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "The last name can only contain letters and spaces")
+    @NotBlank(message = ValidationConstants.LAST_NAME_REQUIRED)
+    @Size(min = ValidationConstants.MIN_NAME_LENGTH, max = ValidationConstants.MAX_NAME_LENGTH, message = ValidationConstants.LAST_NAME_LENGTH)
+    @Pattern(regexp = ValidationConstants.NAME_PATTERN, message = ValidationConstants.NAME_PATTERN_MESSAGE)
     @Schema(example = "Pérez")
     private String lastName;
 
-    @NotNull(message = "Age is required")
-    @Min(value = 0, message = "Age must be greater than or equal to 0")
-    @Max(value = 150, message = "Age must be less than or equal to 150")
+    @NotNull(message = ValidationConstants.AGE_REQUIRED)
+    @Min(value = ValidationConstants.MIN_AGE, message = ValidationConstants.AGE_MIN_MESSAGE)
+    @Max(value = ValidationConstants.MAX_AGE, message = ValidationConstants.AGE_MAX_MESSAGE)
     @Schema(example = "30")
     private Integer age;
     
-    @NotNull(message = "Birth date is required")
-    @Past(message = "Birth date must be in the past")
+    @NotNull(message = ValidationConstants.BIRTH_DATE_REQUIRED)
+    @Past(message = ValidationConstants.BIRTH_DATE_PAST)
     @Schema(example = "1994-01-01")
     private LocalDate birthDate;
 } 
