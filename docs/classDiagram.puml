@@ -1,0 +1,346 @@
+@startuml Customer Management Service - Sequence Diagram (Accurate)
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+
+title Customer Management Service - Sequence Diagram
+
+actor "Client" as User
+participant "CustomerController" as Controller << (C,#ADD1B2) >>
+participant "CustomerService" as Service << (S,#ADD1B2) >>
+participant "CustomerMapper" as Mapper << (M,#ADD1B2) >>
+participant "CustomerRepository" as Repository << (R,#ADD1B2) >>
+participant "RabbitTemplate" as RabbitMQ << (Q,#ADD1B2) >>
+database "H2 Database" as DB
+
+== Create Customer (POST /api/customers) ==
+
+User -> Controller: POST /api/customers\n{firstName, lastName, age, birthDate}
+activate Controller
+
+Controller -> Controller: @Valid validation
+note right: Input data validation\n@AgeMatchesBirthDate validation
+
+Controller -> Service: createCustomer(customerCreateDTO)
+activate Service
+
+Service -> Mapper: toEntity(customerCreateDTO)
+activate Mapper
+Mapper --> Service: Customer entity
+deactivate Mapper
+
+Service -> Service: calculateEstimatedEventDate()
+note right: birthDate + 65 years
+
+Service -> Repository: save(customer)
+activate Repository
+Repository -> DB: INSERT INTO customers (...)
+note right: @CreatedDate, @LastModifiedDate\nhandled automatically
+DB --> Repository: Customer saved with ID
+Repository --> Service: saved Customer
+deactivate Repository
+
+Service -> RabbitMQ: convertAndSend("customer.events", "customer.created", customer)
+activate RabbitMQ
+alt RabbitMQ available
+    RabbitMQ --> Service: Message sent
+    note right: Asynchronous processing
+else RabbitMQ unavailable
+    RabbitMQ --> Service: Connection failed
+    Service -> Service: log.warn("Failed to send message")
+    note right: Graceful degradation\nOperation continues
+end
+deactivate RabbitMQ
+
+Service -> Mapper: toDTO(savedCustomer)
+activate Mapper
+Mapper --> Service: CustomerDTO
+deactivate Mapper
+
+Service --> Controller: CustomerDTO
+deactivate Service
+
+Controller --> User: 200 OK + CustomerDTO\n{id, firstName, lastName, age, birthDate, estimatedEventDate, creationDate, updateDate}
+deactivate Controller
+
+== Get All Customers (GET /api/customers) ==
+
+User -> Controller: GET /api/customers
+activate Controller
+
+Controller -> Service: getAllCustomers()
+activate Service
+
+Service -> Repository: findAllByOrderByCreationDateDesc()
+activate Repository
+Repository -> DB: SELECT * FROM customers ORDER BY creation_date DESC
+DB --> Repository: List<Customer>
+Repository --> Service: List<Customer>
+deactivate Repository
+
+Service -> Mapper: toDTO(customer) for each customer
+activate Mapper
+Mapper --> Service: List<CustomerDTO>
+deactivate Mapper
+
+Service --> Controller: List<CustomerDTO>
+deactivate Service
+
+Controller --> User: 200 OK + List<CustomerDTO>
+deactivate Controller
+
+== Get Customer by ID (GET /api/customers/{id}) ==
+
+User -> Controller: GET /api/customers/{id}
+activate Controller
+
+Controller -> Service: getCustomerById(id)
+activate Service
+
+Service -> Repository: findById(id)
+activate Repository
+Repository -> DB: SELECT * FROM customers WHERE id = ?
+alt Customer found
+    DB --> Repository: Customer
+    Repository --> Service: Optional<Customer>
+    Service -> Mapper: toDTO(customer)
+    activate Mapper
+    Mapper --> Service: CustomerDTO
+    deactivate Mapper
+    Service --> Controller: CustomerDTO
+    Controller --> User: 200 OK + CustomerDTO
+else Customer not found
+    DB --> Repository: null
+    Repository --> Service: Optional.empty()
+    Service -> Service: throw CustomerNotFoundException
+    Service --> Controller: Exception
+    Controller --> User: 404 Not Found + ErrorResponse\n{message: "Customer not found with ID: {id}"}
+end
+deactivate Repository
+deactivate Service
+deactivate Controller
+
+== Update Customer (PATCH /api/customers/{id}) ==
+
+User -> Controller: PATCH /api/customers/{id}\n{firstName?, lastName?, age?, birthDate?}
+activate Controller
+
+Controller -> Controller: @Valid validation
+note right: Input data validation\n@AgeMatchesBirthDate validation
+
+Controller -> Service: updateCustomer(id, customerUpdateDTO)
+activate Service
+
+Service -> Repository: findById(id)
+activate Repository
+Repository -> DB: SELECT * FROM customers WHERE id = ?
+alt Customer found
+    DB --> Repository: Customer
+    Repository --> Service: Optional<Customer>
+
+    Service -> Mapper: updateEntityFromDTO(customer, updateDTO)
+    activate Mapper
+    Mapper --> Service: Updated Customer
+    deactivate Mapper
+
+    alt birthDate changed
+        Service -> Service: recalculateEstimatedEventDate()
+        note right: Recalculate retirement date
+    end
+
+    Service -> Repository: save(updatedCustomer)
+    Repository -> DB: UPDATE customers SET ... WHERE id = ?
+    note right: @LastModifiedDate\nupdated automatically
+    DB --> Repository: Updated Customer
+    Repository --> Service: saved Customer
+    deactivate Repository
+
+    Service -> RabbitMQ: convertAndSend("customer.events", "customer.updated", customer)
+    activate RabbitMQ
+    alt RabbitMQ available
+        RabbitMQ --> Service: Message sent
+    else RabbitMQ unavailable
+        RabbitMQ --> Service: Connection failed
+        Service -> Service: log.warn("Failed to send message")
+        note right: Graceful degradation
+    end
+    deactivate RabbitMQ
+
+    Service -> Mapper: toDTO(savedCustomer)
+    activate Mapper
+    Mapper --> Service: CustomerDTO
+    deactivate Mapper
+
+    Service --> Controller: CustomerDTO
+    Controller --> User: 200 OK + CustomerDTO
+else Customer not found
+    DB --> Repository: null
+    Repository --> Service: Optional.empty()
+    Service -> Service: throw CustomerNotFoundException
+    Service --> Controller: Exception
+    Controller --> User: 404 Not Found + ErrorResponse
+end
+deactivate Service
+deactivate Controller
+
+== Delete Customer (DELETE /api/customers/{id}) ==
+
+User -> Controller: DELETE /api/customers/{id}
+activate Controller
+
+Controller -> Service: deleteCustomer(id)
+activate Service
+
+Service -> Repository: findById(id)
+activate Repository
+Repository -> DB: SELECT * FROM customers WHERE id = ?
+alt Customer found
+    DB --> Repository: Customer
+    Repository --> Service: Optional<Customer>
+
+    Service -> Repository: delete(customer)
+    Repository -> DB: DELETE FROM customers WHERE id = ?
+    DB --> Repository: Deleted
+    deactivate Repository
+
+    Service -> RabbitMQ: convertAndSend("customer.events", "customer.deleted", id)
+    activate RabbitMQ
+    alt RabbitMQ available
+        RabbitMQ --> Service: Message sent
+    else RabbitMQ unavailable
+        RabbitMQ --> Service: Connection failed
+        Service -> Service: log.warn("Failed to send message")
+        note right: Graceful degradation
+    end
+    deactivate RabbitMQ
+
+    Service --> Controller: void
+    Controller --> User: 204 No Content
+else Customer not found
+    DB --> Repository: null
+    Repository --> Service: Optional.empty()
+    Service -> Service: throw CustomerNotFoundException
+    Service --> Controller: Exception
+    Controller --> User: 404 Not Found + ErrorResponse
+end
+deactivate Service
+deactivate Controller
+
+== Get Customer Statistics (GET /api/customers/stats) ==
+
+User -> Controller: GET /api/customers/stats
+activate Controller
+
+Controller -> Service: getCustomerStats()
+activate Service
+
+Service -> Repository: getAverageAge()
+activate Repository
+Repository -> DB: SELECT AVG(age) FROM customers
+DB --> Repository: averageAge
+Repository --> Service: Double
+deactivate Repository
+
+Service -> Repository: getAgeStandardDeviation()
+activate Repository
+Repository -> DB: SELECT SQRT(AVG(POWER(age - (SELECT AVG(age) FROM customers), 2))) FROM customers
+DB --> Repository: standardDeviation
+Repository --> Service: Double
+deactivate Repository
+
+Service -> Repository: count()
+activate Repository
+Repository -> DB: SELECT COUNT(*) FROM customers
+DB --> Repository: totalCustomers
+Repository --> Service: Long
+deactivate Repository
+
+Service -> Service: new CustomerStatsDTO(averageAge, standardDeviation, totalCustomers)
+Service --> Controller: CustomerStatsDTO
+deactivate Service
+
+Controller --> User: 200 OK + CustomerStatsDTO\n{averageAge, ageStandardDeviation, totalCustomers}
+deactivate Controller
+
+== Get Average Age (GET /api/customers/stats/average-age) ==
+
+User -> Controller: GET /api/customers/stats/average-age
+activate Controller
+
+Controller -> Service: getAverageAge()
+activate Service
+
+Service -> Repository: getAverageAge()
+activate Repository
+Repository -> DB: SELECT AVG(age) FROM customers
+DB --> Repository: averageAge
+Repository --> Service: Double
+deactivate Repository
+
+Service --> Controller: Double
+deactivate Service
+
+Controller --> User: 200 OK + averageAge
+deactivate Controller
+
+== Get Age Standard Deviation (GET /api/customers/stats/age-standard-deviation) ==
+
+User -> Controller: GET /api/customers/stats/age-standard-deviation
+activate Controller
+
+Controller -> Service: getAgeStandardDeviation()
+activate Service
+
+Service -> Repository: getAgeStandardDeviation()
+activate Repository
+Repository -> DB: SELECT SQRT(AVG(POWER(age - (SELECT AVG(age) FROM customers), 2))) FROM customers
+DB --> Repository: standardDeviation
+Repository --> Service: Double
+deactivate Repository
+
+Service --> Controller: Double
+deactivate Service
+
+Controller --> User: 200 OK + standardDeviation
+deactivate Controller
+
+== Error Handling ==
+
+User -> Controller: Invalid Request
+activate Controller
+
+Controller -> Controller: @Valid validation fails
+note right: MethodArgumentNotValidException\n@AgeMatchesBirthDate validation\n"Age does not match birth date"
+
+Controller -> Controller: GlobalExceptionHandler
+note right: @RestControllerAdvice
+
+Controller --> User: 400 Bad Request + ValidationErrorResponse\n{status: 400, message: "Validation error", errors: {...}}
+deactivate Controller
+
+== Global Exception Handling ==
+
+User -> Controller: Request with non-existent ID
+activate Controller
+
+Controller -> Service: getCustomerById(nonExistentId)
+activate Service
+
+Service -> Repository: findById(nonExistentId)
+activate Repository
+Repository -> DB: SELECT * FROM customers WHERE id = ?
+DB --> Repository: null
+Repository --> Service: Optional.empty()
+deactivate Repository
+
+Service -> Service: throw CustomerNotFoundException
+Service --> Controller: CustomerNotFoundException
+deactivate Service
+
+Controller -> Controller: GlobalExceptionHandler.handleCustomerNotFoundException()
+Controller --> User: 404 Not Found + ErrorResponse\n{status: 404, message: "Customer not found with ID: {id}"}
+deactivate Controller
+
+@enduml
